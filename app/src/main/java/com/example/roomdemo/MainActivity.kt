@@ -41,6 +41,10 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.roomdemo.ui.theme.RoomDemoTheme
 
+/**
+ * Главная Activity приложения RoomDemo.
+ * Точка входа в приложение, инициализирующая Compose UI и связывающая его с MainViewModel.
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,16 +52,18 @@ class MainActivity : ComponentActivity() {
         setContent {
             RoomDemoTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    // Получаем текущий ViewModelStoreOwner
                     val owner = LocalViewModelStoreOwner.current
                     owner?.let {
+                        // Инициализируем MainViewModel с помощью пользовательской фабрики MainViewModelFactory
                         val viewModel: MainViewModel = viewModel(
                             it,
                             "MainViewModel",
                             MainViewModelFactory(
-                                LocalContext.current.applicationContext
-                                        as Application
+                                LocalContext.current.applicationContext as Application
                             )
                         )
+                        // Передаем модель представления в экранную структуру
                         ScreenSetup(
                             modifier = Modifier.padding(innerPadding),
                             viewModel = viewModel
@@ -69,11 +75,17 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Вспомогательный Composable-компонент верхнего уровня.
+ * Подписывается на LiveData из ViewModel и преобразует их в состояния Compose.
+ */
 @Composable
 fun ScreenSetup(modifier: Modifier = Modifier, viewModel: MainViewModel) {
+    // Наблюдение за полным списком товаров и результатами поиска через observeAsState
     val allProducts by viewModel.allProducts.observeAsState(listOf())
     val searchResults by viewModel.searchResults.observeAsState(listOf())
 
+    // Передача состояний в главный экран интерфейса
     MainScreen(
         modifier = modifier,
         allProducts = allProducts,
@@ -82,6 +94,10 @@ fun ScreenSetup(modifier: Modifier = Modifier, viewModel: MainViewModel) {
     )
 }
 
+/**
+ * Главный экран пользовательского интерфейса Compose.
+ * Содержит текстовые поля ввода, кнопки управления и список отображения LazyColumn.
+ */
 @Composable
 fun MainScreen(
     modifier: Modifier = Modifier,
@@ -89,10 +105,14 @@ fun MainScreen(
     searchResults: List<Product>,
     viewModel: MainViewModel
 ) {
+    // Состояния полей ввода имени товара и количества
     var productName by remember { mutableStateOf("") }
     var productQuantity by remember { mutableStateOf("") }
+
+    // Флаг режима поиска (true - показывать результаты поиска, false - полный список)
     var searching by remember { mutableStateOf(false) }
 
+    // Обработчики изменения текста в текстовых полях
     val onProductTextChange = { text: String ->
         productName = text
     }
@@ -105,6 +125,7 @@ fun MainScreen(
         horizontalAlignment = CenterHorizontally,
         modifier = modifier.fillMaxWidth()
     ) {
+        // Текстовое поле для ввода названия товара
         CustomTextField(
             title = "Product Name",
             textState = productName,
@@ -112,6 +133,7 @@ fun MainScreen(
             keyboardType = KeyboardType.Text
         )
 
+        // Текстовое поле для ввода количества товара
         CustomTextField(
             title = "Quantity",
             textState = productQuantity,
@@ -119,12 +141,14 @@ fun MainScreen(
             keyboardType = KeyboardType.Number
         )
 
+        // Ряд с кнопками действий: Add, Search, Delete, Clear
         Row(
             horizontalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(10.dp)
         ) {
+            // Кнопка добавления нового товара
             Button(onClick = {
                 if (productQuantity.isNotEmpty()) {
                     viewModel.insertProduct(
@@ -139,6 +163,7 @@ fun MainScreen(
                 Text("Add")
             }
 
+            // Кнопка поиска товара по названию
             Button(onClick = {
                 searching = true
                 viewModel.findProduct(productName)
@@ -146,6 +171,7 @@ fun MainScreen(
                 Text("Search")
             }
 
+            // Кнопка удаления товара из БД
             Button(onClick = {
                 searching = false
                 viewModel.deleteProduct(productName)
@@ -153,6 +179,7 @@ fun MainScreen(
                 Text("Delete")
             }
 
+            // Кнопка очистки полей ввода и сброса режима поиска
             Button(onClick = {
                 searching = false
                 productName = ""
@@ -162,17 +189,21 @@ fun MainScreen(
             }
         }
 
+        // Прокручиваемый список для отображения товаров
         LazyColumn(
             Modifier
                 .fillMaxWidth()
                 .padding(10.dp)
         ) {
+            // Выбор списка данных в зависимости от флага поиска
             val list = if (searching) searchResults else allProducts
 
+            // Заголовок таблицы
             item {
                 TitleRow(head1 = "ID", head2 = "Product", head3 = "Quantity")
             }
 
+            // Элементы списка товаров
             items(list) { product ->
                 ProductRow(
                     id = product.id,
@@ -184,6 +215,9 @@ fun MainScreen(
     }
 }
 
+/**
+ * Компонент строки заголовков таблицы товаров (ID, Product, Quantity).
+ */
 @Composable
 fun TitleRow(head1: String, head2: String, head3: String) {
     Row(
@@ -207,6 +241,9 @@ fun TitleRow(head1: String, head2: String, head3: String) {
     }
 }
 
+/**
+ * Компонент отдельной строки таблицы товаров для отображения данных о продукте.
+ */
 @Composable
 fun ProductRow(id: Int, name: String, quantity: Int) {
     Row(
@@ -222,6 +259,9 @@ fun ProductRow(id: Int, name: String, quantity: Int) {
     }
 }
 
+/**
+ * Пользовательское текстовое поле ввода OutlinedTextField со стилизацией шрифта.
+ */
 @Composable
 fun CustomTextField(
     title: String,
@@ -245,6 +285,10 @@ fun CustomTextField(
     )
 }
 
+/**
+ * Пользовательская фабрика ViewModelProvider.Factory для создания экземпляров MainViewModel
+ * с передачей контекста приложения Application в качестве параметра конструктора.
+ */
 class MainViewModelFactory(val application: Application) :
     ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
